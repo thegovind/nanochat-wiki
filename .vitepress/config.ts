@@ -5,12 +5,12 @@ export default withMermaid(
   defineConfig({
     title: 'nanochat',
     description: 'The simplest experimental harness for training LLMs',
-    base: '/nanochat/',
+    base: '/nanochat-wiki/',
     cleanUrls: true,
     lastUpdated: true,
 
     head: [
-      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/nanochat/logo.svg' }],
+      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/nanochat-wiki/logo.svg' }],
     ],
 
     themeConfig: {
