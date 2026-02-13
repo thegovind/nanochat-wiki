@@ -1,6 +1,5 @@
 {
-  "name": "wiki",
-  "version": "1.0.0",
+  "name": "nanochat-wiki",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,9 +8,9 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "medium-zoom": "^1.1.0",
-    "mermaid": "^11.12.2",
-    "vitepress": "^1.6.4",
-    "vitepress-plugin-mermaid": "^2.0.17"
+    "vitepress": "^1.6.3",
+    "markdown-it-mathjax3": "^4.3.2",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "mermaid": "^11.4.1"
   }
 }

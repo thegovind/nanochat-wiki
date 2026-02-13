@@ -1,0 +1,56 @@
+# nanochat
+
+> The simplest experimental harness for training LLMs — train GPT-2 capability for ~$72
+
+nanochat is a minimal, full-stack ChatGPT clone by Andrej Karpathy covering tokenization, pretraining, SFT, RL, evaluation, inference, and a chat UI. A single --depth parameter auto-configures all hyperparameters for compute-optimal training.
+
+## Getting Started
+
+- [Overview](getting-started/overview.md): What is nanochat and why it exists
+- [Installation](getting-started/installation.md): Environment setup, hardware requirements
+- [GPT-2 Speedrun](getting-started/speedrun-walkthrough.md): Complete pipeline walkthrough
+- [Quick Reference](getting-started/quick-reference.md): Commands and troubleshooting
+
+## Architecture
+
+- [GPT Model](deep-dive/architecture/gpt-model.md): Transformer with RoPE, QK norm, ReLU², GQA
+- [Attention](deep-dive/architecture/attention-mechanisms.md): Flash Attention 3, SDPA fallback
+- [MLP & Blocks](deep-dive/architecture/mlp-and-blocks.md): Residual connections, per-layer scalars
+- [Scaling](deep-dive/architecture/scaling-and-configuration.md): Depth dial, auto-configuration
+
+## Data Pipeline
+
+- [Tokenizer](deep-dive/data-pipeline/tokenizer.md): BPE with RustBPE + tiktoken
+- [Dataset](deep-dive/data-pipeline/dataset.md): FineWeb-Edu 100BT
+- [Dataloader](deep-dive/data-pipeline/dataloader.md): BOS-aligned bestfit packing
+
+## Training
+
+- [Pretraining](deep-dive/training/pretraining.md): Distributed base model training
+- [SFT](deep-dive/training/supervised-finetuning.md): Multi-task instruction tuning
+- [RL](deep-dive/training/reinforcement-learning.md): Simplified GRPO on GSM8K
+
+## Optimization
+
+- [Muon/AdamW](deep-dive/optimization/muon-adamw.md): Fused mixed optimizer
+- [LR Schedule](deep-dive/optimization/learning-rate-schedule.md): Warmup, warmdown
+- [FP8](deep-dive/optimization/fp8-training.md): Float8Linear, dynamic scaling
+
+## Evaluation
+
+- [CORE Metric](deep-dive/evaluation/core-metric.md): DCLM CORE evaluation
+- [Tasks](deep-dive/evaluation/evaluation-tasks.md): GSM8K, MMLU, ARC, HumanEval
+- [BPB](deep-dive/evaluation/bits-per-byte.md): Vocab-independent loss
+
+## Inference
+
+- [Engine](deep-dive/inference/inference-engine.md): KV cache, batched generation
+- [Chat UI](deep-dive/inference/chat-ui.md): FastAPI web server
+- [Code Execution](deep-dive/inference/code-execution.md): Sandboxed Python
+
+## Onboarding
+
+- [Contributor](onboarding/contributor.md)
+- [Staff Engineer](onboarding/staff-engineer.md)
+- [Executive](onboarding/executive.md)
+- [Product Manager](onboarding/product-manager.md)

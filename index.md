@@ -1,123 +1,95 @@
 ---
+title: nanochat Documentation
+description: Comprehensive documentation for nanochat — the simplest experimental harness for training LLMs
 layout: home
 hero:
-  name: nanochat Wiki
-  text: The minimal full-stack ChatGPT clone
-  tagline: Train your own GPT-2 for ~$72 in ~3 hours. Comprehensive documentation for Andrej Karpathy's nanochat.
-  image:
-    src: /logo.svg
-    alt: nanochat
+  name: nanochat
+  text: The simplest experimental harness for training LLMs
+  tagline: Train your own GPT-2 capability model for ~$72 in ~3 hours
   actions:
     - theme: brand
-      text: Get Started →
-      link: /01-getting-started/overview
+      text: Get Started
+      link: /getting-started/overview
     - theme: alt
-      text: Onboarding Guide
-      link: /onboarding-guide
+      text: Deep Dive
+      link: /deep-dive/architecture/gpt-model
+    - theme: alt
+      text: GitHub
+      link: https://github.com/karpathy/nanochat
 features:
-  - icon: 🧠
+  - icon: 🚀
     title: Full-Stack LLM Training
-    details: Tokenization → Pretraining → SFT → RL → Evaluation → Inference → Chat UI, all in one repo
-  - icon: 🎛️
-    title: One Dial - depth
-    details: Set --depth and all hyperparameters are auto-calculated for compute-optimal training
-  - icon: ⚡
-    title: GPU Optimized
-    details: Flash Attention 3, FP8 training, Muon optimizer, sliding window attention, and distributed training
+    details: Covers tokenization, pretraining, SFT, RL, evaluation, inference, and chat UI
+  - icon: 🎯
+    title: Single Complexity Dial
+    details: One --depth parameter auto-configures all hyperparameters for compute-optimal training
+  - icon: 💰
+    title: GPT-2 for $72
+    details: Train GPT-2 capability models in ~3 hours on 8XH100 GPUs — down from $43K in 2019
   - icon: 🔧
     title: Minimal & Hackable
-    details: No giant config objects or framework abstractions — clean, readable PyTorch code designed for forking
+    details: No framework bloat, no config objects — just clean, readable, forkable PyTorch code
 ---
 
-## Welcome to nanochat
+## 📖 Documentation Guide
 
-**nanochat** is [Andrej Karpathy](https://github.com/karpathy)'s minimal full-stack ChatGPT clone — a single repository that takes you from raw text all the way to a working chat interface. Every stage of the LLM pipeline is implemented in clean, readable PyTorch with a single `--depth` dial that auto-configures all hyperparameters for compute-optimal training. A GPT-2 grade model can be trained from scratch for approximately **$72 in ~3 hours on 8×H100 GPUs**.
+### Getting Started
+| Page | Description |
+|------|-------------|
+| [Overview](./getting-started/overview) | What is nanochat and why it exists |
+| [Installation](./getting-started/installation) | Environment setup and hardware requirements |
+| [GPT-2 Speedrun](./getting-started/speedrun-walkthrough) | Complete pipeline walkthrough |
+| [Quick Reference](./getting-started/quick-reference) | Commands, metrics, and troubleshooting |
 
-### Architecture Overview
+### Deep Dive
 
-The diagram below shows the end-to-end pipeline that nanochat implements:
+#### Architecture
+| Page | Description |
+|------|-------------|
+| [GPT Transformer Model](./deep-dive/architecture/gpt-model) | RoPE, QK norm, ReLU², GQA, sliding windows |
+| [Attention Mechanisms](./deep-dive/architecture/attention-mechanisms) | Flash Attention 3, SDPA fallback, KV cache |
+| [MLP & Blocks](./deep-dive/architecture/mlp-and-blocks) | Residual connections, per-layer scalars |
+| [Scaling & Configuration](./deep-dive/architecture/scaling-and-configuration) | Depth dial, FLOPS estimation |
 
-```mermaid
-flowchart LR
-    A["📚 Dataset"] --> B["🔤 Tokenizer"]
-    B --> C["📦 Dataloader"]
-    C --> D["🧠 GPT Model"]
-    D --> E["⚙️ Pretraining"]
-    E --> F["🎯 SFT"]
-    F --> G["🏆 RL"]
-    G --> H["📊 Evaluation"]
-    H --> I["🚀 Inference Engine"]
-    I --> J["💬 Web UI"]
+#### Data Pipeline
+| Page | Description |
+|------|-------------|
+| [Tokenizer](./deep-dive/data-pipeline/tokenizer) | BPE with RustBPE + tiktoken |
+| [Dataset](./deep-dive/data-pipeline/dataset) | FineWeb-Edu 100BT preparation |
+| [Dataloader](./deep-dive/data-pipeline/dataloader) | BOS-aligned bestfit packing |
 
-    style A fill:#2d333b,stroke:#58a6ff,color:#c9d1d9
-    style B fill:#2d333b,stroke:#58a6ff,color:#c9d1d9
-    style C fill:#2d333b,stroke:#58a6ff,color:#c9d1d9
-    style D fill:#2d333b,stroke:#f78166,color:#c9d1d9
-    style E fill:#2d333b,stroke:#f78166,color:#c9d1d9
-    style F fill:#2d333b,stroke:#f78166,color:#c9d1d9
-    style G fill:#2d333b,stroke:#f78166,color:#c9d1d9
-    style H fill:#2d333b,stroke:#3fb950,color:#c9d1d9
-    style I fill:#2d333b,stroke:#3fb950,color:#c9d1d9
-    style J fill:#2d333b,stroke:#3fb950,color:#c9d1d9
-```
+#### Training Stages
+| Page | Description |
+|------|-------------|
+| [Pretraining](./deep-dive/training/pretraining) | Distributed base model training |
+| [Supervised Fine-Tuning](./deep-dive/training/supervised-finetuning) | Multi-task instruction tuning |
+| [Reinforcement Learning](./deep-dive/training/reinforcement-learning) | Simplified GRPO on GSM8K |
 
-### Key Module Map
+#### Optimization
+| Page | Description |
+|------|-------------|
+| [Muon/AdamW Optimizer](./deep-dive/optimization/muon-adamw) | Fused mixed optimizer |
+| [Learning Rate Schedule](./deep-dive/optimization/learning-rate-schedule) | Warmup, warmdown, scaling |
+| [FP8 Training](./deep-dive/optimization/fp8-training) | Float8Linear, dynamic scaling |
 
-```mermaid
-graph TD
-    subgraph Data["Data Layer"]
-        DS["nanochat/dataset.py<br>Parquet download"]
-        TK["nanochat/tokenizer.py<br>BPE tokenizer"]
-        DL["nanochat/dataloader.py<br>Bestfit packing"]
-    end
+#### Evaluation
+| Page | Description |
+|------|-------------|
+| [CORE Metric](./deep-dive/evaluation/core-metric) | DCLM CORE evaluation |
+| [Evaluation Tasks](./deep-dive/evaluation/evaluation-tasks) | GSM8K, MMLU, ARC, HumanEval |
+| [Bits Per Byte](./deep-dive/evaluation/bits-per-byte) | Vocab-independent loss metric |
 
-    subgraph Model["Model Layer"]
-        GPT["nanochat/gpt.py<br>GPT + RoPE + GQA"]
-        FA["nanochat/flash_attention.py<br>FA3 / SDPA"]
-        FP8["nanochat/fp8.py<br>FP8 matmul"]
-    end
+#### Inference & Deployment
+| Page | Description |
+|------|-------------|
+| [Inference Engine](./deep-dive/inference/inference-engine) | KV cache, batched generation |
+| [Chat UI](./deep-dive/inference/chat-ui) | FastAPI web server |
+| [Code Execution](./deep-dive/inference/code-execution) | Sandboxed Python execution |
 
-    subgraph Training["Training Layer"]
-        BT["scripts/base_train.py<br>Pretraining loop"]
-        SFT["scripts/chat_sft.py<br>Supervised finetuning"]
-        RL["scripts/chat_rl.py<br>REINFORCE RL"]
-        OPT["nanochat/optim.py<br>Muon + AdamW"]
-    end
-
-    subgraph Inference["Inference Layer"]
-        ENG["nanochat/engine.py<br>KV cache + generation"]
-        WEB["scripts/chat_web.py<br>FastAPI server"]
-        EXEC["nanochat/execution.py<br>Sandboxed code exec"]
-    end
-
-    DS --> TK --> DL --> BT
-    GPT --> BT
-    GPT --> SFT
-    GPT --> RL
-    OPT --> BT
-    OPT --> SFT
-    OPT --> RL
-    FA --> GPT
-    FP8 --> GPT
-    BT --> SFT --> RL
-    GPT --> ENG --> WEB
-    EXEC --> ENG
-
-    style Data fill:#161b22,stroke:#30363d,color:#e6edf3
-    style Model fill:#161b22,stroke:#30363d,color:#e6edf3
-    style Training fill:#161b22,stroke:#30363d,color:#e6edf3
-    style Inference fill:#161b22,stroke:#30363d,color:#e6edf3
-    style DS fill:#2d333b,stroke:#58a6ff,color:#e6edf3
-    style TK fill:#2d333b,stroke:#58a6ff,color:#e6edf3
-    style DL fill:#2d333b,stroke:#58a6ff,color:#e6edf3
-    style GPT fill:#2d333b,stroke:#f78166,color:#e6edf3
-    style FA fill:#2d333b,stroke:#f78166,color:#e6edf3
-    style FP8 fill:#2d333b,stroke:#f78166,color:#e6edf3
-    style BT fill:#2d333b,stroke:#6d5dfc,color:#e6edf3
-    style SFT fill:#2d333b,stroke:#6d5dfc,color:#e6edf3
-    style RL fill:#2d333b,stroke:#6d5dfc,color:#e6edf3
-    style OPT fill:#2d333b,stroke:#6d5dfc,color:#e6edf3
-    style ENG fill:#2d333b,stroke:#3fb950,color:#e6edf3
-    style WEB fill:#2d333b,stroke:#3fb950,color:#e6edf3
-    style EXEC fill:#2d333b,stroke:#3fb950,color:#e6edf3
-```
+### Onboarding Guides
+| Guide | Audience |
+|-------|----------|
+| [Contributor Guide](./onboarding/contributor) | New contributors with Python/PyTorch experience |
+| [Staff Engineer Guide](./onboarding/staff-engineer) | Senior engineers evaluating architecture |
+| [Executive Guide](./onboarding/executive) | VP/director-level technology leaders |
+| [Product Manager Guide](./onboarding/product-manager) | PMs and non-engineering stakeholders |

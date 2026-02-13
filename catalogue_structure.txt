@@ -1,0 +1,118 @@
+nanochat Documentation Catalogue Structure
+═══════════════════════════════════════════════════════════════════════════════
+
+Repository: https://github.com/karpathy/nanochat (master)
+Total: 2 sections, 23 pages, 160 prompts
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. GETTING STARTED                                           [4 pages, 24 prompts] │
+│    Quick introduction, setup, and basic workflows                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│    📄 Overview                                                  [5 prompts] │
+│       What is nanochat, GPT-2 speedrun, design principles                  │
+│                                                                             │
+│    📄 Installation & Environment Setup                          [5 prompts] │
+│       Hardware, platforms, dependencies, memory requirements                │
+│                                                                             │
+│    📄 GPT-2 Speedrun Walkthrough                                [8 prompts] │
+│       Complete pipeline: tokenizer → dataset → pretrain → SFT → RL → chat  │
+│                                                                             │
+│    📄 Quick Reference                                           [6 prompts] │
+│       Common commands, key metrics, --depth dial, troubleshooting           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. DEEP DIVE                                              [6 sections, 136 prompts] │
+│    Technical deep-dives into implementation                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│    2.1 ARCHITECTURE                                      [4 pages, 25 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 GPT Transformer Model                             [7 prompts]    │
+│           GPTConfig, RoPE, QK norm, ReLU², GQA, sliding window, RMSNorm    │
+│                                                                             │
+│        📄 Attention Mechanism                               [6 prompts]    │
+│           CausalSelfAttention, Flash Attention 3, RoPE, KV cache           │
+│                                                                             │
+│        📄 MLP Blocks & ResFormer                            [5 prompts]    │
+│           ReLU² activation, value embeddings, residual connections         │
+│                                                                             │
+│        📄 Model Scaling Laws                                [7 prompts]    │
+│           --depth dial, Chinchilla scaling, miniseries, compute-optimal    │
+│                                                                             │
+│    2.2 DATA PIPELINE                                     [3 pages, 19 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 BPE Tokenizer                                     [6 prompts]    │
+│           GPT-4-style tokenizer, rustbpe, tiktoken, special tokens         │
+│                                                                             │
+│        📄 Dataset Preparation                               [6 prompts]    │
+│           FineWeb-Edu, preprocessing, parquet conversion, BOS insertion    │
+│                                                                             │
+│        📄 Distributed Dataloader                            [7 prompts]    │
+│           BOS-aligned bestfit, DDP sharding, stateful resumption           │
+│                                                                             │
+│    2.3 TRAINING STAGES                                   [3 pages, 28 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 Base Model Pretraining                           [10 prompts]    │
+│           Language modeling, mixed Muon/AdamW, FP8, BPB, checkpointing     │
+│                                                                             │
+│        📄 Supervised Fine-Tuning (SFT)                      [8 prompts]    │
+│           Task mixture, conversation formatting, tool use, lower LR        │
+│                                                                             │
+│        📄 Reinforcement Learning (RL)                      [10 prompts]    │
+│           Simplified GRPO/REINFORCE, GSM8K, advantages, pass@k eval        │
+│                                                                             │
+│    2.4 OPTIMIZATION                                      [3 pages, 23 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 Mixed Muon/AdamW Optimizer                        [8 prompts]    │
+│           Parameter grouping, fused AdamW, Polar Express, NorMuon          │
+│                                                                             │
+│        📄 Learning Rate Schedule                            [7 prompts]    │
+│           Warmup, warmdown, cosine annealing, per-parameter-group LRs      │
+│                                                                             │
+│        📄 FP8 Training                                      [8 prompts]    │
+│           float8_e4m3fn/e5m2, tensorwise scaling, torch._scaled_mm, 2x speedup │
+│                                                                             │
+│    2.5 EVALUATION                                        [3 pages, 22 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 DCLM CORE Metric                                  [8 prompts]    │
+│           Aggregate metric, task coverage, few-shot prompting, scoring     │
+│                                                                             │
+│        📄 Individual Task Evaluations                       [8 prompts]    │
+│           GSM8K, MMLU, ARC, HumanEval, SmolTalk, SpellingBee tasks        │
+│                                                                             │
+│        📄 Bits Per Byte (BPB) Metric                        [6 prompts]    │
+│           Vocab-size-invariant loss, calculation, validation eval          │
+│                                                                             │
+│    2.6 INFERENCE & DEPLOYMENT                            [3 pages, 19 prompts] │
+│    ────────────────────────────────────────────────────────────────────────│
+│        📄 Inference Engine                                  [7 prompts]    │
+│           KV cache, generation methods, tool use (calculator), sandboxing  │
+│                                                                             │
+│        📄 Chat Interfaces (CLI & Web)                       [6 prompts]    │
+│           CLI chat, FastAPI web server, streaming SSE, abuse prevention    │
+│                                                                             │
+│        📄 Data-Parallel Serving                             [6 prompts]    │
+│           Worker pool, multi-GPU, request routing, health checks, stats    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+KEY PRINCIPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ All prompts cite actual source code (32 unique files)
+✓ Citation format: (file_path:line_number) with GitHub links
+✓ Maximum nesting: 4 levels
+✓ Maximum children per section: 8
+✓ Derived from actual implementation, not generic templates
+✓ Progressive learning path: Getting Started → Deep Dive
+
+═══════════════════════════════════════════════════════════════════════════════
+NANOCHAT KEY ACHIEVEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+Train GPT-2 capability (0.256 DCLM CORE score) in ~2.76 hours on 8XH100 for ~$72
+Original GPT-2 training cost: $43,000 (2019)
+Modern speedup: ~600x cheaper, ~60x faster
+
+Single complexity dial: --depth (4 to 32) auto-configures all hyperparameters

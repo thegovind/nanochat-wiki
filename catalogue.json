@@ -1,0 +1,385 @@
+{
+  "title": "nanochat Documentation",
+  "description": "Comprehensive documentation for nanochat — the simplest experimental harness for training LLMs, covering tokenization, pretraining, SFT, RL, evaluation, and inference.",
+  "repo_url": "https://github.com/karpathy/nanochat",
+  "branch": "master",
+  "sections": [
+    {
+      "id": "getting-started",
+      "title": "Getting Started",
+      "description": "Quick introduction to nanochat, environment setup, and basic training workflows",
+      "pages": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "description": "What is nanochat and why it exists — training GPT-2 capability models for under $100",
+          "prompts": [
+            "Introduction to nanochat as a minimal LLM training harness for single GPU nodes (README.md:1-25)",
+            "The GPT-2 speedrun challenge: train GPT-2 capability in ~3 hours on 8XH100 for $72 (README.md:10-21)",
+            "Key design principle: single complexity dial (--depth) auto-configures all hyperparameters (README.md:78)",
+            "Supported training stages: tokenization, pretraining, SFT, RL, evaluation, inference, chat UI (README.md:6)",
+            "Historical context: GPT-2 originally cost $43,000 to train in 2019, now achievable for <$100 (README.md:21)"
+          ]
+        },
+        {
+          "id": "installation",
+          "title": "Installation & Environment Setup",
+          "description": "Setting up dependencies, GPU requirements, and initial configuration",
+          "prompts": [
+            "Hardware requirements: 8XH100 GPU node for speedrun, but works on single GPU with gradient accumulation (README.md:52)",
+            "Supported platforms: CUDA (H100/A100), CPU, MPS (Apple Silicon), XPU with device_type autodetection (nanochat/common.py:1-30)",
+            "Python environment setup using uv and pyproject.toml dependencies (pyproject.toml:1-30)",
+            "Memory requirements: 80GB VRAM default, tune --device-batch-size for smaller GPUs (README.md:53)",
+            "Alternative hardware: 8XA100 supported but slower, single GPU requires 8x longer training (README.md:51-52)"
+          ]
+        },
+        {
+          "id": "speedrun-walkthrough",
+          "title": "GPT-2 Speedrun Walkthrough",
+          "description": "Complete pipeline to train and chat with your own GPT-2 capability model",
+          "prompts": [
+            "The speedrun.sh script: single-file pipeline covering entire training workflow (runs/speedrun.sh:1-50)",
+            "Step 1: Train BPE tokenizer on FineWeb-Edu dataset with 32K vocab size (scripts/tok_train.py:1-50)",
+            "Step 2: Prepare dataset by tokenizing FineWeb-Edu and converting to parquet format (nanochat/dataset.py:1-50)",
+            "Step 3: Pretrain base model (d26, ~124M params) for 10B tokens using mixed Muon/AdamW optimizer (scripts/base_train.py:1-80)",
+            "Step 4: Supervised fine-tuning on task mixture (GSM8K, MMLU, SmolTalk, SpellingBee) (scripts/chat_sft.py:1-80)",
+            "Step 5: Reinforcement learning on GSM8K using simplified GRPO/REINFORCE (scripts/chat_rl.py:1-80)",
+            "Step 6: Launch chat web UI with FastAPI and data-parallel inference (scripts/chat_web.py:1-50)",
+            "Expected results: ~0.2602 DCLM CORE score, matching GPT-2 1.6B capability in 2.76 hours (README.md:19)"
+          ]
+        },
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "description": "Common commands, key hyperparameters, and troubleshooting tips",
+          "prompts": [
+            "Training a d12 (GPT-1 sized) model for quick experimentation (~5 min runs) (README.md:58-68)",
+            "Key monitoring metrics: val_bpb (vocab-invariant loss), core_metric (DCLM CORE), train/mfu, tok_per_sec (README.md:71-75)",
+            "The --depth dial: controls model size, auto-computes width, heads, learning rates, training horizon (README.md:78)",
+            "Distributed training with torchrun: OMP_NUM_THREADS=1 torchrun --standalone --nproc_per_node=8 (scripts/base_train.py:7-8)",
+            "Evaluation-only runs: evaluate DCLM CORE metric on pre-trained checkpoints (scripts/base_eval.py:1-30)",
+            "CPU/MPS training: dramatically shrunk models for local testing via runcpu.sh (runs/runcpu.sh:1-20)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deep-dive",
+      "title": "Deep Dive",
+      "description": "Technical deep-dives into architecture, implementation, training stages, and optimization",
+      "sections": [
+        {
+          "id": "architecture",
+          "title": "Architecture",
+          "description": "Model architecture, components, and design decisions",
+          "pages": [
+            {
+              "id": "gpt-model",
+              "title": "GPT Transformer Model",
+              "description": "Core GPT architecture with modern improvements: RoPE, QK norm, ReLU², GQA, sliding window attention",
+              "prompts": [
+                "GPTConfig dataclass: key hyperparameters (sequence_len, vocab_size, n_layer, n_head, n_kv_head, n_embd, window_pattern) (nanochat/gpt.py:28-39)",
+                "Core architectural features: rotary embeddings (no positional encodings), QK norm, untied embeddings/lm_head, ReLU² MLP activation (nanochat/gpt.py:1-13)",
+                "Group-Query Attention (GQA): n_kv_head ≤ n_head for efficient inference with shared K/V heads (nanochat/gpt.py:64-68)",
+                "Sliding window attention pattern: configurable via window_pattern string (L=full context, S=half context, e.g., 'SSSL') (nanochat/gpt.py:36-39)",
+                "RMSNorm implementation: purely functional with no learnable parameters for stability (nanochat/gpt.py:42-44)",
+                "Value embeddings (ResFormer): alternating layers have value projection gates for improved context routing (nanochat/gpt.py:47-49)",
+                "No bias in linear layers: all nn.Linear layers use bias=False for efficiency (nanochat/gpt.py:69-72)"
+              ]
+            },
+            {
+              "id": "attention-mechanism",
+              "title": "Attention Mechanism",
+              "description": "CausalSelfAttention implementation with Flash Attention 3, RoPE, and KV cache support",
+              "prompts": [
+                "CausalSelfAttention forward pass: Q/K/V projections in BHLD layout (batch, seq, heads, dim) (nanochat/gpt.py:59-80)",
+                "Rotary embeddings (RoPE): apply_rotary_emb splits hidden dim in half and rotates pairs of dimensions (nanochat/gpt.py:51-57)",
+                "Flash Attention 3 integration: automatic FA3 vs SDPA fallback based on GPU architecture (nanochat/flash_attention.py:1-50)",
+                "Flash Attention 3 availability: only on Hopper (sm90) GPUs, falls back to PyTorch SDPA on Ada/Blackwell/Ampere (nanochat/flash_attention.py:23-42)",
+                "KV cache for inference: flash_attn_with_kvcache appends new K/V to cache and returns updated cache (nanochat/gpt.py:76-120)",
+                "Sliding window attention: window_size parameter limits context to recent tokens (causal_half or causal_full) (nanochat/gpt.py:38-39)"
+              ]
+            },
+            {
+              "id": "mlp-blocks",
+              "title": "MLP Blocks & ResFormer",
+              "description": "Feed-forward blocks with ReLU² activation, value embeddings, and residual connections",
+              "prompts": [
+                "MLP architecture: two linear layers with ReLU² (squared ReLU) activation function (nanochat/gpt.py:130-150)",
+                "ReLU² activation: F.relu(x).square() for improved gradient flow vs standard ReLU (nanochat/gpt.py:135)",
+                "Residual connections: post-layer normalization pattern with norm(x) + residual (nanochat/gpt.py:160-180)",
+                "ResFormer value embeddings: alternating layers gate V projections for dynamic context routing (nanochat/gpt.py:73-74)",
+                "Hidden dimension scaling: MLP hidden dim = 4 * n_embd for standard transformer ratio (nanochat/gpt.py:132)"
+              ]
+            },
+            {
+              "id": "model-scaling",
+              "title": "Model Scaling Laws",
+              "description": "Automatic hyperparameter calculation based on depth, Chinchilla scaling, and compute-optimal training",
+              "prompts": [
+                "Single complexity dial: --depth determines all hyperparameters (width, heads, LR, training horizon, weight decay) (README.md:78)",
+                "Model dimension scaling: model_dim = depth * aspect_ratio, where aspect_ratio defaults to 64 (scripts/base_train.py:50-51)",
+                "Head dimension targeting: number of heads computed to achieve target head_dim (default 128) (scripts/base_train.py:52)",
+                "Chinchilla scaling: --target-param-data-ratio (default 10.5) maintains optimal data-to-parameter ratio (scripts/base_train.py:57)",
+                "Training horizon calculation: num_iterations auto-computed from target_flops or param_data_ratio (scripts/base_train.py:54-57)",
+                "Miniseries concept: sweeping --depth from 4 to 32 generates compute-optimal models at various scales (runs/miniseries.sh:1-30)",
+                "GPT-2 capability at d24-d26: approximately 124M parameters, 10B training tokens for CORE score ~0.26 (README.md:78-79)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-pipeline",
+          "title": "Data Pipeline",
+          "description": "Tokenization, dataset preparation, and distributed data loading",
+          "pages": [
+            {
+              "id": "tokenizer",
+              "title": "BPE Tokenizer",
+              "description": "GPT-4-style BPE tokenizer with rustbpe training and tiktoken inference",
+              "prompts": [
+                "Two tokenizer implementations: HuggingFace Tokenizer (training + inference) and RustBPE + tiktoken (production) (nanochat/tokenizer.py:1-10)",
+                "Special tokens: <|bos|>, <|user_start|>, <|user_end|>, <|assistant_start|>, <|assistant_end|>, <|python_start|>, <|python_end|>, <|output_start|>, <|output_end|> (nanochat/tokenizer.py:13-25)",
+                "Split pattern: GPT-4-style regex with \\p{N}{1,2} (2-digit numbers) instead of \\p{N}{1,3} for smaller vocab sizes (nanochat/tokenizer.py:30)",
+                "Default vocab size: 32,768 tokens for optimal balance at nanochat scale (scripts/tok_train.py:1-50)",
+                "Tokenizer training: train on FineWeb-Edu subset, saves to out/tokenizer/ directory (scripts/tok_train.py:40-80)",
+                "Token bytes utility: get_token_bytes() returns byte representation for bits-per-byte (BPB) loss calculation (nanochat/tokenizer.py:50-70)"
+              ]
+            },
+            {
+              "id": "dataset-preparation",
+              "title": "Dataset Preparation",
+              "description": "FineWeb-Edu download, preprocessing, and conversion to parquet format",
+              "prompts": [
+                "Primary dataset: FineWeb-Edu (10B sample) from HuggingFace, educational web content for pretraining (nanochat/dataset.py:1-30)",
+                "Dataset download: streaming from HuggingFace datasets, no need for full download upfront (nanochat/dataset.py:40-60)",
+                "Tokenization: batch tokenize using multiprocessing for CPU efficiency (nanochat/dataset.py:70-100)",
+                "Parquet format: token sequences stored in columnar format for efficient distributed loading (nanochat/dataset.py:110-130)",
+                "Train/val split: last parquet file reserved for validation, all others for training (nanochat/dataloader.py:36-37)",
+                "BOS token insertion: every document begins with <|bos|> token for clear sequence boundaries (nanochat/dataloader.py:4-5)"
+              ]
+            },
+            {
+              "id": "dataloader",
+              "title": "Distributed Dataloader",
+              "description": "BOS-aligned bestfit packing with distributed sharding and stateful resumption",
+              "prompts": [
+                "BOS-aligned bestfit algorithm: every row starts with BOS, documents packed to minimize cropping (nanochat/dataloader.py:4-8)",
+                "100% utilization: no padding tokens, ~35% tokens cropped at sequence length 2048 (nanochat/dataloader.py:8)",
+                "DDP sharding: each rank reads different row groups from parquet files for data parallelism (nanochat/dataloader.py:33-67)",
+                "Stateful resumption: dataloader can resume from (pq_idx, rg_idx, epoch) checkpoint state (nanochat/dataloader.py:39-45)",
+                "Multi-epoch support: infinite iterator that cycles through dataset, tracking epoch count (nanochat/dataloader.py:46-70)",
+                "Bestfit cropping: when no document fits remaining space, crops a document to fill exactly to sequence length (nanochat/dataloader.py:78-120)",
+                "Trade-off rationale: BOS-aligned loses ~35% tokens to cropping but ensures clear document boundaries for attention (nanochat/dataloader.py:10-13)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "training-stages",
+          "title": "Training Stages",
+          "description": "Pretraining, supervised fine-tuning (SFT), and reinforcement learning (RL) workflows",
+          "pages": [
+            {
+              "id": "pretraining",
+              "title": "Base Model Pretraining",
+              "description": "Unsupervised pretraining on FineWeb-Edu with mixed Muon/AdamW optimizer",
+              "prompts": [
+                "Entry point: scripts/base_train.py with torchrun for distributed training (scripts/base_train.py:1-12)",
+                "Training objective: next-token prediction (language modeling) with cross-entropy loss (scripts/base_train.py:200-250)",
+                "Batch size calculation: total_batch_size in tokens, auto-computes gradient accumulation steps (scripts/base_train.py:60)",
+                "Default batch size: 524,288 tokens per optimization step (or auto-computed based on model size) (scripts/base_train.py:60)",
+                "FP8 training support: --fp8 flag enables float8_e4m3fn/float8_e5m2 mixed precision on H100+ (nanochat/fp8.py:1-50)",
+                "FP8 implementation: minimal ~150 lines vs torchao's ~2000 lines, tensorwise dynamic scaling only (nanochat/fp8.py:1-10)",
+                "Bits-per-byte (BPB) metric: vocab-size-invariant loss computed as log2(exp(loss)) / avg_bytes_per_token (nanochat/loss_eval.py:1-40)",
+                "Validation evaluation: evaluate_bpb() runs on held-out parquet file every --eval-every steps (scripts/base_train.py:73-74)",
+                "Checkpoint saving: model, optimizer state, config, and dataloader state saved to out/checkpoints/<model_tag>/ (nanochat/checkpoint_manager.py:1-50)",
+                "Wandb logging: tracks loss, BPB, MFU (model FLOPS utilization), tok/sec, CORE metric, GPU memory (scripts/base_train.py:42)"
+              ]
+            },
+            {
+              "id": "supervised-finetuning",
+              "title": "Supervised Fine-Tuning (SFT)",
+              "description": "Fine-tuning on task mixture with chat formatting and tool use",
+              "prompts": [
+                "Entry point: scripts/chat_sft.py, loads pretrained base model checkpoint (scripts/chat_sft.py:1-12)",
+                "Task mixture: TaskMixture combines GSM8K, MMLU, SmolTalk, SpellingBee, CustomJSON tasks (scripts/chat_sft.py:26-31)",
+                "Conversation formatting: render_conversation() converts Task instances to <|user_start|>...<|assistant_start|> format (tasks/common.py:50-100)",
+                "Tool use: GSM8K renders calculator calls as <|python_start|>...<|output_start|> for teaching tool interaction (tasks/gsm8k.py:55-80)",
+                "Training objective: cross-entropy loss on assistant tokens only (user tokens masked out) (scripts/chat_sft.py:150-180)",
+                "Hyperparameters: lower learning rates than pretraining, typically 1 epoch over SFT dataset (scripts/chat_sft.py:50-65)",
+                "Weight decay: usually 0.0 for SFT to preserve pretrained knowledge (scripts/chat_sft.py:54)",
+                "Output: saves SFT checkpoint to out/checkpoints/<model_tag>/sft/ directory (scripts/chat_sft.py:200-220)"
+              ]
+            },
+            {
+              "id": "reinforcement-learning",
+              "title": "Reinforcement Learning (RL)",
+              "description": "Simplified GRPO/REINFORCE on GSM8K for improved reasoning",
+              "prompts": [
+                "Entry point: scripts/chat_rl.py, loads SFT checkpoint and trains on GSM8K with policy gradient (scripts/chat_rl.py:1-17)",
+                "Algorithm: simplified GRPO (\"GRPO\" in quotes) — essentially REINFORCE with token-level advantages (scripts/chat_rl.py:4-10)",
+                "Key simplifications: no KL penalty to reference model, no PPO ratio clipping, on-policy only (scripts/chat_rl.py:7-8)",
+                "Sampling strategy: generate --num-samples (default 16) completions per question at temperature 1.0 (scripts/chat_rl.py:49-52)",
+                "Reward calculation: binary 0/1 based on correct final answer extraction after #### marker (tasks/gsm8k.py:22-34)",
+                "Advantage normalization: token-level (r - mean(r)) following DAPO, not z-score normalization (scripts/chat_rl.py:9-10)",
+                "Policy gradient: RL loss = -advantage * log_prob for each token in sampled completions (scripts/chat_rl.py:150-180)",
+                "Pass@k evaluation: evaluate on 400 examples every 60 steps, report pass@1, pass@4, pass@16 (scripts/chat_rl.py:60-61)",
+                "Training horizon: typically 1 epoch over GSM8K train set (~7.5K examples) (scripts/chat_rl.py:44)",
+                "Output: saves RL checkpoint to out/checkpoints/<model_tag>/rl/ directory (scripts/chat_rl.py:200-220)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "optimization",
+          "title": "Optimization",
+          "description": "Mixed Muon/AdamW optimizer, learning rate schedules, and FP8 training",
+          "pages": [
+            {
+              "id": "muon-adamw",
+              "title": "Mixed Muon/AdamW Optimizer",
+              "description": "Combined optimizer: AdamW for embeddings/scalars, Muon for weight matrices",
+              "prompts": [
+                "Two optimizer versions: MuonAdamW (single GPU) and DistMuonAdamW (distributed with all-reduce) (nanochat/optim.py:1-8)",
+                "Parameter grouping: embeddings/scalars go to AdamW, matrix parameters (Q/K/V/proj/MLP) go to Muon (nanochat/optim.py:100-150)",
+                "AdamW implementation: fused single-kernel step with torch.compile for zero Python overhead (nanochat/optim.py:20-50)",
+                "Muon optimizer: Newton-Schulz iteration for matrix orthogonalization, adapted from modded-nanogpt (nanochat/optim.py:51-78)",
+                "Polar Express method: alternative to Newton-Schulz with better convergence for orthogonalization (nanochat/optim.py:65-68)",
+                "NorMuon variance reduction: per-neuron adaptive learning rate after orthogonalization to normalize update scales (nanochat/optim.py:70-73)",
+                "Default learning rates: embedding_lr=0.3, unembedding_lr=0.004, matrix_lr=0.02, scalar_lr=0.5 (scripts/base_train.py:62-65)",
+                "Weight decay: 0.2 for Muon parameters (\"cautious weight decay\"), 0.0 for embeddings in SFT/RL (scripts/base_train.py:63)"
+              ]
+            },
+            {
+              "id": "learning-rate-schedule",
+              "title": "Learning Rate Schedule",
+              "description": "Warmup and warmdown schedules with cosine annealing",
+              "prompts": [
+                "Three-phase schedule: warmup → constant → warmdown with cosine annealing (scripts/base_train.py:68-70)",
+                "Warmup ratio: default 0.0 (no warmup) for pretraining, can be increased for stability (scripts/base_train.py:68)",
+                "Warmdown ratio: default 0.5, means LR decays during second half of training (scripts/base_train.py:69)",
+                "Final LR fraction: default 0.0, LR decays to 0 at end of training (scripts/base_train.py:70)",
+                "SFT schedule: typically init_lr_frac=1.0 (start at full LR) for fine-tuning (scripts/chat_sft.py:55)",
+                "RL schedule: typically init_lr_frac=0.05 (start at 5% of base LR) for policy gradient stability (scripts/chat_rl.py:58)",
+                "Per-parameter-group LRs: each parameter group (embedding, unembedding, matrix, scalar) has independent base LR (scripts/base_train.py:62-65)"
+              ]
+            },
+            {
+              "id": "fp8-training",
+              "title": "FP8 Training",
+              "description": "Float8 mixed precision training with tensorwise dynamic scaling",
+              "prompts": [
+                "FP8 dtype choice: float8_e4m3fn for weights/activations (higher precision), float8_e5m2 for gradients (wider range) (nanochat/fp8.py:24-30)",
+                "Tensorwise scaling: one scalar scale per tensor, computed as FP8_MAX / max(|tensor|) (nanochat/fp8.py:16-18)",
+                "Three matmuls in FP8: forward (input @ weight.T), backward input (grad_output @ weight), backward weight (grad_output.T @ input) (nanochat/fp8.py:10-13)",
+                "torch._scaled_mm kernel: cuBLAS FP8 matmul, ~2x faster than bfloat16 on H100+ (nanochat/fp8.py:18)",
+                "Memory layout requirements: A must be row-major, B must be column-major for cuBLAS (nanochat/fp8.py:33-38)",
+                "FP8Linear wrapper: drop-in replacement for nn.Linear, handles FP8 quantization/dequantization (nanochat/fp8.py:50-150)",
+                "Recipe choice: --fp8-recipe tensorwise (faster, recommended) vs rowwise (more accurate, slower) (scripts/base_train.py:47)",
+                "Speedup: FP8 training achieves ~2.76 hours for GPT-2 speedrun vs ~2.91 hours with bfloat16 (README.md:18-19)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "evaluation",
+          "title": "Evaluation",
+          "description": "DCLM CORE metric, task evaluations, and performance benchmarking",
+          "pages": [
+            {
+              "id": "core-metric",
+              "title": "DCLM CORE Metric",
+              "description": "The primary evaluation metric: DCLM CORE aggregate score across multiple tasks",
+              "prompts": [
+                "CORE definition: aggregate metric from DCLM paper combining multiple-choice, schema, and LM tasks (nanochat/core_eval.py:1-6)",
+                "Entry point: evaluate_core() in scripts/base_eval.py, called during training every --core-metric-every steps (scripts/base_train.py:76)",
+                "Task coverage: includes MMLU, ARC, HellaSwag, PIQA, Winogrande, OpenBookQA, BoolQ, and more (nanochat/core_eval.py:200-250)",
+                "Scoring: normalized aggregate score where higher is better, GPT-2 baseline is 0.256525 (README.md:21)",
+                "Evaluation budget: --core-metric-max-per-task (default 500) limits examples per task for faster eval (scripts/base_train.py:76)",
+                "Few-shot prompting: tasks use 0-shot or few-shot examples rendered via Jinja2 templates (nanochat/core_eval.py:16-60)",
+                "Multiple-choice tasks: compute log-likelihood for each choice, select highest (nanochat/core_eval.py:200-250)",
+                "Schema tasks: evaluate context options and select best-fitting continuation (nanochat/core_eval.py:36-54)"
+              ]
+            },
+            {
+              "id": "task-evaluations",
+              "title": "Individual Task Evaluations",
+              "description": "GSM8K, MMLU, ARC, HumanEval, SmolTalk, and SpellingBee task implementations",
+              "prompts": [
+                "GSM8K: grade-school math problems with tool use (calculator), extract answer after #### marker (tasks/gsm8k.py:1-60)",
+                "MMLU: massive multitask language understanding, 57 subjects, 4-choice multiple choice (tasks/mmlu.py:1-50)",
+                "ARC: AI2 Reasoning Challenge (ARC-Easy, ARC-Challenge), science questions (tasks/arc.py:1-50)",
+                "HumanEval: Python code generation, evaluate via sandboxed execution (tasks/humaneval.py:1-50)",
+                "SmolTalk: conversational ability evaluation with diverse personas and scenarios (tasks/smoltalk.py:1-50)",
+                "SpellingBee: character-level reasoning (count 'r' in 'strawberry'), tests tool use (tasks/spellingbee.py:1-50)",
+                "Task interface: all tasks inherit from Task base class with get_example(), num_examples(), eval_type (tasks/common.py:1-50)",
+                "TaskMixture: combines multiple tasks with configurable sampling weights for SFT training (tasks/common.py:150-200)"
+              ]
+            },
+            {
+              "id": "bits-per-byte",
+              "title": "Bits Per Byte (BPB) Metric",
+              "description": "Vocab-size-invariant loss metric for fair model comparison",
+              "prompts": [
+                "BPB definition: log2(perplexity) / avg_bytes_per_token, measures loss in vocab-size-invariant units (nanochat/loss_eval.py:1-20)",
+                "Calculation: BPB = log2(exp(cross_entropy_loss)) * (1 / get_token_bytes()) (nanochat/loss_eval.py:30-50)",
+                "Validation evaluation: evaluate_bpb() runs on validation parquet file for unbiased loss estimate (nanochat/loss_eval.py:50-100)",
+                "Evaluation budget: --eval-tokens (default 40*524288) controls how many tokens to evaluate on (scripts/base_train.py:74)",
+                "Why BPB: allows comparing models with different tokenizers fairly (e.g., 32K vocab vs 50K vocab) (nanochat/loss_eval.py:10-15)",
+                "Typical values: val_bpb ~0.745 for GPT-2 capability models at end of pretraining (README.md:18-19)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "inference",
+          "title": "Inference & Deployment",
+          "description": "KV cache engine, chat CLI, web UI, and data-parallel serving",
+          "pages": [
+            {
+              "id": "inference-engine",
+              "title": "Inference Engine",
+              "description": "Efficient KV cache engine with tool use (calculator) support",
+              "prompts": [
+                "Engine class: stateful inference engine managing KV cache and generation loop (nanochat/engine.py:1-13)",
+                "KV cache: stores past key/value tensors to avoid recomputing attention for previous tokens (nanochat/engine.py:100-150)",
+                "Generation methods: engine.generate() for greedy, engine.generate_samples() for sampling with temperature/top-k (nanochat/engine.py:200-250)",
+                "Tool use: calculator tool via eval_with_timeout() for arithmetic and string operations like .count() (nanochat/engine.py:26-80)",
+                "Safe execution: sandboxed eval with timeout, limited to safe operations (no __, import, exec) (nanochat/engine.py:47-79)",
+                "Special token handling: detects <|python_start|> tags and injects calculator results as <|output_start|> (nanochat/engine.py:300-350)",
+                "Prefix caching: reuse KV cache when prompt has common prefix (e.g., system message in chat) (nanochat/engine.py:150-180)"
+              ]
+            },
+            {
+              "id": "chat-interfaces",
+              "title": "Chat Interfaces (CLI & Web)",
+              "description": "Command-line chat and web UI for interactive model testing",
+              "prompts": [
+                "Chat CLI: scripts/chat_cli.py provides simple terminal-based chat interface (scripts/chat_cli.py:1-30)",
+                "Chat web server: scripts/chat_web.py serves FastAPI-based ChatGPT-like UI (scripts/chat_web.py:1-50)",
+                "Web UI endpoints: GET / (chat UI), POST /chat/completions (streaming API), GET /health, GET /stats (scripts/chat_web.py:17-23)",
+                "Streaming responses: server-sent events (SSE) for real-time token-by-token generation (scripts/chat_web.py:100-150)",
+                "Abuse prevention: max 500 messages, 8000 chars/message, 32000 chars total, temp ∈ [0, 2], top-k ∈ [0, 200] (scripts/chat_web.py:24-30)",
+                "HTML UI: nanochat/ui.html provides the chat interface with dark theme (nanochat/ui.html:1-100)"
+              ]
+            },
+            {
+              "id": "data-parallel-serving",
+              "title": "Data-Parallel Serving",
+              "description": "Multi-GPU inference with worker pool and request distribution",
+              "prompts": [
+                "Worker pool architecture: each GPU loads full model copy, requests distributed to available workers (scripts/chat_web.py:40-80)",
+                "Launch command: python -m scripts.chat_web --num-gpus 4 for multi-GPU serving (scripts/chat_web.py:14)",
+                "Request routing: asyncio queue distributes incoming requests to idle workers (scripts/chat_web.py:150-200)",
+                "Worker management: health checks, GPU utilization stats, automatic recovery (scripts/chat_web.py:200-250)",
+                "Concurrency: each worker handles one request at a time, total throughput scales linearly with GPU count (scripts/chat_web.py:80-120)",
+                "Stats endpoint: GET /stats returns worker pool status, request counts, GPU memory usage (scripts/chat_web.py:22)"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
