@@ -3,6 +3,32 @@
   --vp-c-brand-1: #6d5dfc;
   --vp-c-brand-2: #5b4de0;
   --vp-c-brand-3: #4a3dc4;
+  --vp-home-hero-name-color: #6d5dfc;
+}
+
+/* Home page content styling */
+.home-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+.home-content h2 {
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 8px;
+  margin-top: 2rem;
+}
+
+.home-content pre {
+  border: 1px solid rgba(109, 93, 252, 0.2);
+}
+
+.home-content table {
+  font-size: 14px;
+}
+
+.home-content p:last-child a {
+  white-space: nowrap;
 }
 
 .dark .mermaid {
