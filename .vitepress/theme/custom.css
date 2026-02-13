@@ -12,27 +12,60 @@
 /* Click-to-zoom for Mermaid diagrams */
 .mermaid {
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
+  position: relative;
 }
 
-.mermaid.zoomed {
+.mermaid:hover {
+  filter: brightness(1.05);
+}
+
+.mermaid::after {
+  content: '🔍';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.mermaid:hover::after {
+  opacity: 0.7;
+}
+
+.mermaid-zoom-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  transform: scale(1);
+  cursor: zoom-out;
+  animation: mermaid-fade-in 0.2s ease;
 }
 
-.mermaid.zoomed svg {
+@keyframes mermaid-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mermaid-zoomed-content {
+  cursor: default;
   max-width: 95vw;
   max-height: 95vh;
+  overflow: auto;
+}
+
+.mermaid-zoomed-content svg {
+  max-width: 95vw;
+  max-height: 90vh;
 }
 
 /* Make tables more readable in dark mode */
