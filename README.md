@@ -45,4 +45,4 @@ The site is automatically deployed to GitHub Pages on every push to `main` via t
 
 ## License
 
-This wiki documentation is provided under the [MIT License](LICENSE).
+This wiki documentation is provided under the MIT License.
